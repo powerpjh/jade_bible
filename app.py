@@ -17,7 +17,7 @@ BIBLE_CODE_MAP = {
     "로마서": "rom", "고린도전서": "1co", "고린도후서": "2co", "갈라디아서": "gal", "에베소서": "eph",
     "빌립보서": "php", "골로새서": "col", "데살로니가전서": "1th", "데살로니가후서": "2th", "디모데전서": "1ti",
     "디모데후서": "2ti", "디도서": "tit", "빌레몬서": "phm", "히브리서": "heb", "야고보서": "jas",
-    "베드로전서": "1pe", "베드로후서": "2pe", "요한1서": "1jn", "요한2서": "1jn", "요한3서": "1jn",
+    "베드로전서": "1pe", "베드로후서": "2pe", "요한1서": "1jn", "요한2서": "2jn", "요한3서": "3jn",
     "유다서": "jud", "요한계시록": "rev"
 }
 
@@ -51,7 +51,7 @@ RAW_PLAN = [
             {"step": "STEP 14", "books": [("골로새서", list(range(1, 5))), ("레위기", list(range(1, 17))), ("시편", [20, 50, 103])]},
             {"step": "STEP 15", "books": [("요한1서", [1, 2, 3, 4, 5]), ("레위기", list(range(17, 28))), ("빌레몬서", [1]), ("잠언", [31])]},
             {"step": "STEP 16", "books": [("민수기", list(range(1, 18))), ("고린도전서", list(range(1, 7))), ("유다서", [1])]},
-            {"step": "STEP 17", "books": [("민수기", list(range(18, 36))), ("고린도전서", list(range(7, 11)))]}
+            {"step": "STEP 17", "books": [("민수기", list(range(18, 37))), ("고린도전서", list(range(7, 11)))]}
         ]
     },
     {
@@ -258,4 +258,4 @@ def index():
     return render_template_string(html_template, plan=processed_plan)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(debug=True)
