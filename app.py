@@ -1,5 +1,5 @@
+from flask import Flask, request, jsonify
 import os
-from flask import Flask, render_template_string, jsonify, request
 
 app = Flask(__name__)
 
@@ -222,24 +222,30 @@ def get_bible():
     book = request.args.get('book', '')
     chapter = request.args.get('chapter', '')
     
-    file_name = "개역한글판성경.txt"
-    short_code = BIBLE_MAP.get(book, "")
+    # 이제 bible 폴더 안에 있는 특정 성경책 파일만 엽니다.
+    file_path = f"bible/{book}.txt"
     
-    # 🎯 핵심 수정: 파일 내부에는 "민1:1" 처럼 저장되어 있으므로 패턴을 정확히 일치시킴
-    prefix = f"{short_code}{chapter}:" 
     verses = []
     
+    # 파일이 존재하는지 먼저 확인
+    if not os.path.exists(file_path):
+        return jsonify({"error": f"{book} 파일을 찾을 수 없습니다."})
+        
     try:
-        with open(file_name, 'r', encoding='utf-8', errors='ignore') as f:
+        with open(file_path, 'r', encoding='utf-8') as f:
             for line in f:
-                # 라인 맨 앞에 prefix가 있는지 확인
-                if line.startswith(prefix):
+                # 찾고자 하는 장(chapter)으로 시작하는 줄만 가져오기
+                # 예: "창1:1 ..." 이라면 "창1:"로 시작하는지 체크
+                if line.startswith(f"{book}{chapter}:"):
                     parts = line.split(' ', 1)
-                    text = parts[1] if len(parts) > 1 else ""
-                    # "민1:1" 에서 "1"만 추출
+                    text = parts[1].strip() if len(parts) > 1 else ""
+                    # "창1:1"에서 ":" 뒷부분인 "1"만 가져오기
                     vs_num = parts[0].split(':')[1]
                     verses.append({"num": vs_num, "text": text})
     except Exception as e:
-        return jsonify({"error": "파일을 읽는 중 오류가 발생했습니다."})
-    
+        return jsonify({"error": str(e)})
+        
     return jsonify({"verses": verses})
+
+if __name__ == '__main__':
+    app.run(debug=True)
