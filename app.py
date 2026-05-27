@@ -1,24 +1,22 @@
 import os
-from flask import Flask, render_template_string
+from flask import Flask, render_template_string, jsonify, request
 
 app = Flask(__name__)
 
-# 한글엘프(nocr.net) 사이트의 성경별 고유 코드 매핑
-BIBLE_CODE_MAP = {
-    "창세기": "gen", "출애굽기": "exo", "레위기": "lev", "민수기": "num", "신명기": "deu",
-    "여호수아": "jos", "사사기": "jdg", "룻기": "rut", "사무엘상": "1sa", "사무엘하": "2sa",
-    "열왕기상": "1ki", "열왕기하": "2ki", "역대상": "1ch", "역대하": "2ch", "에스라": "ezr",
-    "느헤미야": "neh", "에스더": "est", "욥기": "job", "시편": "psa", "잠언": "pro",
-    "전도서": "ecc", "아가": "sng", "이사야": "isa", "예레미야": "jer", "예레미야애가": "lam",
-    "에스겔": "ezk", "다니엘": "dan", "호세아": "hos", "요엘": "jol", "아모스": "amo",
-    "오바디야": "oba", "요나": "jon", "미가": "mic", "나훔": "nam", "하박국": "hab",
-    "스바냐": "zep", "학개": "hag", "스가랴": "zec", "말라기": "mal",
-    "마태복음": "mat", "마가복음": "mrk", "누가복음": "luk", "요한복음": "jhn", "사도행전": "act",
-    "로마서": "rom", "고린도전서": "1co", "고린도후서": "2co", "갈라디아서": "gal", "에베소서": "eph",
-    "빌립보서": "php", "골로새서": "col", "데살로니가전서": "1th", "데살로니가후서": "2th", "디모데전서": "1ti",
-    "디모데후서": "2ti", "디도서": "tit", "빌레몬서": "phm", "히브리서": "heb", "야고보서": "jas",
-    "베드로전서": "1pe", "베드로후서": "2pe", "요한1서": "1jn", "요한2서": "2jn", "요한3서": "3jn",
-    "유다서": "jud", "요한계시록": "rev"
+# 성경책 한글 이름과 파일 내부 약어 매핑 사전 (가장 안전한 연결창 매칭)
+BIBLE_MAP = {
+    "창세기": "창", "출애굽기": "출", "레위기": "레", "민수기": "민", "신명기": "신",
+    "여호수아": "수", "사사기": "삿", "룻기": " provide", "사무엘상": "삼상", "사무엘하": "삼하",
+    "열왕기상": "왕상", "열왕기하": "왕하", "역대상": "대상", "역대하": "대하", "에스라": "스",
+    "느헤미야": "느", "에스더": "에", "욥기": "욥", "시편": "시", "잠언": "잠",
+    "전도서": "전", "아가": "아", "이사야": "사", "예레미야": "렘", "예레미야애가": "애",
+    "에스겔": "겔", "단이엘": "단", "호세아": "호", "요엘": "욜", "아모스": "암",
+    "오바디야": "옵", "요나": "요나", "미가": "미", "나훔": "나", "하박국": "합",
+    "스바니야": "습", "학개": "학", "스가랴": "슥", "말라기": "말",
+    "마가복음": "막", "요한복음": "요", "로마서": "롬", "고린도전서": "고전", "갈라디아서": "갈",
+    "에베소서": "엡", "빌립보서": "빌", "골로새서": "골", "데살로니가전서": "데전", "데살로니가후서": "데후",
+    "디모데전서": "디전", "디모데후서": "디후", "빌레몬서": "몬", "히브리서": "히", "야고보서": "야",
+    "베드로전서": "벧전", "베드로후서": "벧후", "요한1서": "요일", "유다서": "유", "요한계시록": "계"
 }
 
 RAW_PLAN = [
@@ -53,66 +51,6 @@ RAW_PLAN = [
             {"step": "STEP 16", "books": [("민수기", list(range(1, 18))), ("고린도전서", list(range(1, 7))), ("유다서", [1])]},
             {"step": "STEP 17", "books": [("민수기", list(range(18, 37))), ("고린도전서", list(range(7, 11)))]}
         ]
-    },
-    {
-        "part": "PART 4: 하나님의 통치 안에 거하는 삶",
-        "steps": [
-            {"step": "STEP 18", "books": [("고린도전서", list(range(1, 17))), ("고린도후서", list(range(1, 14))), ("시편", [68, 81, 107])]},
-            {"step": "STEP 19", "books": [("신명기", list(range(1, 12))), ("잠언", list(range(1, 11))), ("시편", [90, 91])]},
-            {"step": "STEP 20", "books": [("신명기", list(range(12, 27))), ("잠언", list(range(11, 19)))]},
-            {"step": "STEP 21", "books": [("신명기", list(range(27, 35))), ("잠언", list(range(19, 30))), ("시편", [94, 112])]},
-            {"step": "STEP 22", "books": [("여호수아", list(range(1, 25)))]},
-            {"step": "STEP 23", "books": [("사사기", list(range(1, 22))), ("시편", [106])]},
-            {"step": "STEP 24", "books": [("룻기", list(range(1, 5))), ("사무엘상", list(range(1, 17))), ("시편", [23, 113])]}
-        ]
-    },
-    {
-        "part": "PART 5: 王의 길, 선지자의 길",
-        "steps": [
-            {"step": "STEP 25", "books": [("역대상", [1, 2]), ("마태복음", list(range(1, 21)))]},
-            {"step": "STEP 26", "books": [("마태복음", list(range(21, 29))), ("역대상", list(range(3, 10))), ("사무엘상", [17, 18, 19]), ("시편", [118, 139])]},
-            {"step": "STEP 27", "books": [("사무엘상", list(range(20, 27))), ("시편", [34, 52, 54, 56, 57, 58, 59, 63, 64, 109, 140, 141, 142])]},
-            {"step": "STEP 28", "books": [("사무엘상", list(range(27, 32))), ("사무엘하", [1]), ("역대상", [10]), ("시편", [6, 13, 16, 28, 98])]},
-            {"step": "STEP 29", "books": [("사무엘하", list(range(2, 11))), ("역대상", list(range(11, 20))), ("시편", [21, 24, 25, 51, 60, 66, 89, 96, 101, 132])]},
-            {"step": "STEP 30", "books": [("사무엘하", list(range(11, 21))), ("시편", [3, 4, 42, 43, 55, 61, 62, 71, 143, 144])]},
-            {"step": "STEP 31", "books": [("사무엘하", [21, 22, 23, 24]), ("역대상", [21, 22, 23, 24, 25, 26, 27, 28, 29]), ("열왕기상", [1, 2]), ("시편", [18, 30, 72, 145])]},
-            {"step": "STEP 32", "books": [("열왕기상", list(range(3, 12))), ("역대하", list(range(1, 10))), ("아가", list(range(1, 9))), ("시편", [45, 135, 136])]},
-            {"step": "STEP 33", "books": [("열왕기상", [12, 13, 14, 15, 16]), ("역대하", list(range(10, 17))), ("오바디야", [1]), ("요엘", list(range(1, 4)))]},
-            {"step": "STEP 34", "books": [("열왕기상", list(range(17, 23))), ("열왕기하", list(range(1, 9))), ("역대하", list(range(17, 22))), ("호세아", list(range(1, 15)))]},
-            {"step": "STEP 35", "books": [("아모스", list(range(1, 10))), ("요나", list(range(1, 5))), ("열왕기하", [9, 10, 11, 12, 13, 14]), ("역대하", [22, 23, 24, 25]), ("이사야", list(range(1, 7)))]},
-            {"step": "STEP 36", "books": [("미가", list(range(1, 8))), ("열왕기하", [15, 16]), ("역대하", [26, 27, 28]), ("이사야", list(range(7, 13)))]}
-        ]
-    },
-    {
-        "part": "PART 6: 멸망과 심판 속에서 외친 예언자들",
-        "steps": [
-            {"step": "STEP 37", "books": [("열왕기하", [17, 18, 19, 20, 21]), ("역대하", [29, 30, 31, 32, 33]), ("이사야", list(range(36, 40))), ("시편", [46, 47, 48, 76, 80, 133])]},
-            {"step": "STEP 38", "books": [("이사야", list(range(13, 36)))]},
-            {"step": "STEP 39", "books": [("이사야", list(range(40, 67)))]},
-            {"step": "STEP 40", "books": [("나훔", list(range(1, 4))), ("스바냐", list(range(1, 4))), ("하박국", list(range(1, 4))), ("열왕기하", [22, 23]), ("역대하", [34, 35]), ("예레미야", list(range(1, 11)))]},
-            {"step": "STEP 41", "books": [("예레미야", [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22, 23, 25, 26, 35, 36, 45, 46, 47, 48, 49]), ("열왕기하", [24]), ("역대하", [36])]},
-            {"step": "STEP 42", "books": [("예레미야", [21, 24, 27, 28, 29, 30, 31, 32, 33, 34, 37, 38, 39, 52])]}
-        ]
-    },
-    {
-        "part": "PART 7: 절망 속에서 보는 소망",
-        "steps": [
-            {"step": "STEP 43", "books": [("예레미야애가", list(range(1, 6))), ("예레미야", [40, 41, 42, 43, 44, 50, 51]), ("열왕기하", [25]), ("시편", [74, 79, 137])]},
-            {"step": "STEP 44", "books": [("다니엘", list(range(1, 13)))]},
-            {"step": "STEP 45", "books": [("에스겔", list(range(1, 25)))]},
-            {"step": "STEP 46", "books": [("에스겔", list(range(25, 49)))]},
-            {"step": "STEP 47", "books": [("에스라", list(range(1, 7))), ("학개", [1, 2]), ("스가랴", list(range(1, 15))), ("시편", [121, 124, 127, 128, 146, 147])]}
-        ]
-    },
-    {
-        "part": "PART 8: 메시아가 오시다",
-        "steps": [
-            {"step": "STEP 48", "books": [("에스더", list(range(1, 11))), ("에스라", list(range(7, 11))), ("시편", [120, 125, 129])]},
-            {"step": "STEP 49", "books": [("느헤미야", list(range(1, 14))), ("말라기", list(range(1, 5))), ("시편", [126, 133])]},
-            {"step": "STEP 50", "books": [("누가복음", list(range(1, 25)))]},
-            {"step": "STEP 51", "books": [("로마서", list(range(1, 17)))]},
-            {"step": "STEP 52", "books": [("사도행전", list(range(1, 29))), ("요한계시록", list(range(1, 23)))]}
-        ]
     }
 ]
 
@@ -126,7 +64,6 @@ for p_idx, p in enumerate(RAW_PLAN):
             book_list.append({
                 "id": book_id,
                 "title": b_title,
-                "code": BIBLE_CODE_MAP.get(b_title, "gen"),
                 "chapters": ch_list
             })
         step_list.append({
@@ -144,11 +81,11 @@ html_template = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>제이드의 52주 통독 마스터 앱</title>
+    <title>제이드의 52주 성경통독 독립앱</title>
     <style>
-        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f0f2f5; padding: 20px; margin: 0; padding-bottom: 120px; }
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f0f2f5; padding: 20px; margin: 0; }
         .container { max-width: 900px; margin: 0 auto; }
-        h1 { text-align: center; color: #1a2a6c; margin-bottom: 30px; font-size: 1.6em; word-break: keep-all; }
+        h1 { text-align: center; color: #1a2a6c; margin-bottom: 30px; font-size: 1.6em; }
         .part { background-color: #fff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; padding: 25px; border-left: 6px solid #1a2a6c; }
         .part-title { font-size: 1.2em; font-weight: bold; color: #1a2a6c; padding-bottom: 10px; margin-bottom: 20px; border-bottom: 1px dashed #ddd; }
         .step { background: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 15px; border: 1px solid #e9ecef; }
@@ -161,26 +98,23 @@ html_template = """
             border: 1px solid #ced4da; border-radius: 6px; background-color: #fff; cursor: pointer; user-select: none; 
             font-size: 0.85em; color: #495057; transition: all 0.2s;
         }
-        .chapter:hover { background-color: #e9ecef; border-color: #adb5bd; }
+        .chapter:hover { background-color: #e9ecef; }
         .chapter.checked { background-color: #2b8a3e; color: white; border-color: #2b8a3e; font-weight: bold; }
-        .bible-bar {
-            position: fixed; bottom: 0; left: 0; right: 0;
-            background-color: #ffffff; box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
-            padding: 15px 20px; display: none; z-index: 1000;
-            border-top-left-radius: 16px; border-top-right-radius: 16px;
-        }
-        .bible-bar-content { max-width: 900px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
-        .bible-info { font-size: 1.0em; font-weight: bold; color: #333; }
-        .bible-btn {
-            background-color: #e96479; color: white; border: none;
-            padding: 10px 18px; font-size: 0.95em; font-weight: bold;
-            border-radius: 8px; cursor: pointer; text-decoration: none;
-        }
+        
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: #fff; margin: 8% auto; padding: 25px; border-radius: 16px; width: 85%; max-width: 600px; max-height: 75vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1a2a6c; padding-bottom: 10px; margin-bottom: 15px; }
+        .modal-title { font-size: 1.3em; font-weight: bold; color: #1a2a6c; }
+        .close-btn { font-size: 28px; font-weight: bold; color: #aaa; cursor: pointer; }
+        .close-btn:hover { color: #000; }
+        .bible-text { font-size: 1.15em; line-height: 1.8; color: #222; text-align: justify; word-break: keep-all; }
+        .verse { margin-bottom: 12px; }
+        .verse-num { font-weight: bold; color: #e96479; margin-right: 8px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📖 제이드의 52주 성경통독 마스터</h1>
+        <h1>📖 제이드의 개역한글 성경통독 마스터</h1>
         {% for part in plan %}
         <div class="part">
             <div class="part-title">{{ part.part_title }}</div>
@@ -195,9 +129,8 @@ html_template = """
                         <div class="chapter" 
                              id="btn-{{ book.id }}-{{ chapter }}" 
                              data-book="{{ book.title }}"
-                             data-code="{{ book.code }}"
                              data-chapter="{{ chapter }}"
-                             onclick="toggleCheck(this)">{{ chapter }}</div>
+                             onclick="readBible(this)">{{ chapter }}</div>
                         {% endfor %}
                     </div>
                 </div>
@@ -208,41 +141,68 @@ html_template = """
         {% endfor %}
     </div>
 
-    <div class="bible-bar" id="bibleBar">
-        <div class="bible-bar-content">
-            <div class="bible-info" id="bibleInfo">선택된 장 정보</div>
-            <a href="#" target="_blank" class="bible-btn" id="bibleLink">📖 우리말성경 읽기</a>
+    <div id="bibleModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="modalTitle">성경 말씀</span>
+                <span class="close-btn" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="bible-text" id="modalBody">
+                말씀을 불러오는 중입니다...
+            </div>
         </div>
     </div>
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             document.querySelectorAll('.chapter').forEach(function(element) {
-                var savedState = localStorage.getItem(element.id);
-                if (savedState === "checked") {
+                if (localStorage.getItem(element.id) === "checked") {
                     element.classList.add('checked');
                 }
             });
         });
 
-        function toggleCheck(element) {
+        function readBible(element) {
             element.classList.toggle('checked');
-            const bookTitle = element.getAttribute('data-book');
-            const bibleCode = element.getAttribute('data-code');
-            const chapter = element.getAttribute('data-chapter');
-            const bar = document.getElementById('bibleBar');
-            
             if (element.classList.contains('checked')) {
                 localStorage.setItem(element.id, "checked");
-                
-                document.getElementById('bibleInfo').innerText = `📍 ${bookTitle} ${chapter}장`;
-                
-                document.getElementById('bibleLink').href = `https://nocr.net/korwrm/read.php?b=${bibleCode}&c=${chapter}`;
-                
-                bar.style.display = 'block';
             } else {
                 localStorage.removeItem(element.id);
-                bar.style.display = 'none';
+            }
+
+            const book = element.getAttribute('data-book');
+            const chapter = element.getAttribute('data-chapter');
+            
+            document.getElementById('modalTitle').innerText = `${book} ${chapter}장`;
+            document.getElementById('modalBody').innerText = "통짜 파일에서 말씀을 검색하고 있습니다...";
+            document.getElementById('bibleModal').style.display = "block";
+
+            fetch(`/get_bible?book=${encodeURIComponent(book)}&chapter=${chapter}`)
+                .then(response => response.json())
+                .then(data => {
+                    const body = document.getElementById('modalBody');
+                    body.innerHTML = "";
+                    if (data.error) {
+                        body.innerText = data.error;
+                    } else {
+                        data.verses.forEach(v => {
+                            body.innerHTML += `<div class="verse"><span class="verse-num">${v.num}</span>${v.text}</div>`;
+                        });
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('modalBody').innerText = "성경 파일을 읽어오지 못했습니다. 파일명을 확인해 주세요!";
+                });
+        }
+
+        function closeModal() {
+            document.getElementById('bibleModal').style.display = "none";
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('bibleModal');
+            if (event.target == modal) {
+                modal.style.display = "none";
             }
         }
     </script>
@@ -253,6 +213,43 @@ html_template = """
 @app.route('/')
 def index():
     return render_template_string(html_template, plan=processed_plan)
+
+# 🎯 제이드님이 업로드하신 한 개의 큰 파일에서 구절을 기가 막히게 뽑아내는 안전 필터 기능!
+@app.route('/get_bible')
+def get_bible():
+    book = request.args.get('book', '')
+    chapter = request.args.get('chapter', '')
+    
+    file_name = "개역한글판성경.txt"
+    if not os.path.exists(file_name):
+        return jsonify({"error": f"저장소에 '{file_name}' 파일이 아직 업로드되지 않았습니다."})
+        
+    short_code = BIBLE_MAP.get(book, "")
+    if not short_code:
+        return jsonify({"error": "알 수 없는 성경 책 이름입니다."})
+        
+    prefix = f"{short_code}{chapter}:" # 예: "민36:" 패턴 찾기
+    verses = []
+    
+    try:
+        with open(file_name, 'r', encoding='utf-8', errors='ignore') as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith(prefix):
+                    # "민36:13 말씀내용" 에서 구절 번호와 본문 텍스트 분리
+                    parts = line.split(' ', 1)
+                    ref = parts[0] # "민36:13"
+                    text = parts[1] if len(parts) > 1 else "" # "이는 여호와께서..."
+                    
+                    vs_num = ref.split(':')[1]
+                    verses.append({"num": vs_num, "text": text})
+    except Exception as e:
+        return jsonify({"error": "성경 파일을 읽는 도중 오류가 발생했습니다."})
+        
+    if not verses:
+        return jsonify({"error": f"{book} {chapter}장 본문을 찾을 수 없습니다."})
+        
+    return jsonify({"verses": verses})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
