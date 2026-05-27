@@ -237,8 +237,7 @@ html_template = """
                 
                 document.getElementById('bibleInfo').innerText = `📍 ${bookTitle} ${chapter}장`;
                 
-                const padChapter = String(chapter).padStart(2, '0');
-                document.getElementById('bibleLink').href = `https://nocr.net/korwrm/read.php?b=${bibleCode}&c=${padChapter}`;
+                document.getElementById('bibleLink').href = `https://nocr.net/korwrm/read.php?b=${bibleCode}&c=${chapter}`;
                 
                 bar.style.display = 'block';
             } else {
