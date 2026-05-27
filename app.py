@@ -1,12 +1,41 @@
 import os
 import sys
-import webbrowser
-import threading
 from flask import Flask, render_template_string
 
 app = Flask(__name__)
 
-# 단 하나의 스텝도 빠짐없이 52개 전체를 꽉 채우고 문법 검증을 끝낸 데이터입니다.
+# 각 성경별 네이버 성경(우리말성경 번역본 공식 코드) 매핑 테이블
+bible_url_mapping = {
+    "창세기": "GEN", "출애굽기(1-15장)": "EXO", "출애굽기(19-40장)": "EXO", "레위기(1-16장)": "LEV", "레위기(17-27장)": "LEV",
+    "민수기(1-17장)": "NUM", "민수기(18-36장)": "NUM", "신명기(1-11장)": "DEU", "신명기(12-26장)": "DEU", "신명기(27-34장)": "DEU",
+    "여호수아": "JOS", "사사기": "JDG", "룻기": "RUT", "사무엘상(1-16장)": "1SA", "사무엘상(17-19장)": "1SA", "사무엘상(20-26장)": "1SA",
+    "사무엘상/하, 역대상": "1SA", "사무엘하, 역대상": "2SA", "사무엘하(13-20장)": "2SA", "사무엘하, 역대상, 열왕기상": "2SA",
+    "열왕기상, 역대하, 아가": "1KI", "열왕기상, 역대하": "1KI", "열왕기상/하, 역대하": "1KI", "열왕기하, 역대하": "2KI",
+    "열왕기하, 역대하, 이사야": "2KI", "역대상(1-2장)": "1CH", "역대상(3-9장)": "1CH", "에스라, 학개, 스가랴": "EZR",
+    "에스라(7-10장)": "EZR", "느헤미야": "NEH", "에스더": "EST", "욥기": "JOB", "전도서": "ECC", "아가": "SNG",
+    "이사야(1-6장)": "ISA", "이사야(7-12장)": "ISA", "이사야(13-35장)": "ISA", "이사야(40-66장)": "ISA",
+    "예레미야(1-10장)": "JER", "예레미야 선집": "JER", "예레미야 포위기록": "JER", "예레미야애가, 예레미야": "LAM",
+    "에스겔(1-24장)": "EZK", "에스겔(25-48장)": "EZK", "다니엘": "DAN", "호세아": "HOS", "요엘": "JOL",
+    "아모스, 요나": "AMO", "오바디야, 요엘": "OBA", "요나": "JON", "미가": "MIC", "나훔, 스바냐, 하박국": "NAM",
+    "하박국": "HAB", "스바냐": "ZEP", "학개": "HAG", "스가랴": "ZEC", "말라기": "MAL",
+    "마태복음(1-20장)": "MAT", "마태복음(21-28장)": "MAT", "마가복음": "MRK", "누가복음": "LUK", "요한복음": "JHN",
+    "사도행전": "ACT", "로마서": "ROM", "서신서 복습(로마서 등)": "ROM", "고린도전서(1-6장)": "1CO", "고린도전서(7-10장)": "1CO",
+    "고린도전/후서": "1CO", "갈라디아서": "GAL", "에베소서": "EPH", "빌립보서": "PHP", "골로새서": "COL",
+    "데살로니가전서": "1TH", "데살로니가후서": "2TH", "디모데전서": "1TI", "디모데후서": "2TI", "디도서": "TIT",
+    "빌레몬서": "PHM", "히브리서": "HEB", "야고보서": "JAS", "베드로전서": "1PE", "베드로후서": "2PE",
+    "요한1,2,3서": "1JN", "유다서": "JUD", "요한계시록": "REV",
+    "시편(37,38,39,41편)": "PSA", "시편(49,73,88편)": "PSA", "시편(1,8,19,104,148편)": "PSA", "시편(3장)": "PSA",
+    "창세기(1,2장)": "GEN", "창세기(3장)": "GEN", "창세기(4,5장)": "GEN", "창세기(6,7장)": "GEN", "창세기(8,9장)": "GEN",
+    "시편(14편)": "PSA", "시편(10편)": "PSA", "시편(29편)": "PSA", "시편(9,32,33,65편)": "PSA", "시편(22,69편)": "PSA",
+    "시편(2편)": "PSA", "시편(15,131,67,86편)": "PSA", "시편(114,136,77편)": "PSA", "시편(105,78편)": "PSA",
+    "시편(97,99편)": "PSA", "시편(95,110,117,119편)": "PSA", "시편(20,50,103편)": "PSA", "잠언(31장)": "PRO",
+    "잠언(1-10장)": "PRO", "잠언(11-18장)": "PRO", "잠언(19-29장)": "PRO", "시편(90,91편)": "PSA",
+    "시편(94,112편)": "PSA", "시편(106편)": "PSA", "시편(23,113편)": "PSA", "다윗 대피시편들": "PSA",
+    "시편(6,13,16,28,98편)": "PSA", "통치시편들": "PSA", "고난시편들": "PSA", "찬양시편들": "PSA",
+    "성전시편들": "PSA", "성벽시편들": "PSA", "애곡시편들": "PSA", "귀환시편들": "PSA", "시편(120,125,129편)": "PSA",
+    "시편(126,133편)": "PSA"
+}
+
 bible_reading_plan = [
     {
         "part_title": "PART 1: 초대 그리스도인이 현대 그리스도인에게",
@@ -110,16 +139,15 @@ html_template = """
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>제이드의 52주 통독 마스터 앱</title>
     <style>
-        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f0f2f5; padding: 20px; margin: 0; }
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f0f2f5; padding: 20px; margin: 0; padding-bottom: 120px; }
         .container { max-width: 900px; margin: 0 auto; }
         
-        /* 💡 제목 크기를 줄이고 핸드폰에서도 절대 안 깨지게 수정 */
         h1 { 
             text-align: center; 
             color: #1a2a6c; 
             margin-bottom: 30px; 
-            font-size: 1.6em; /* 글자 크기 축소 */
-            white-space: nowrap; /* 무조건 한 줄로 나오게 강제 */
+            font-size: 1.6em; 
+            white-space: nowrap; 
             word-break: keep-all; 
         }
         
@@ -137,6 +165,28 @@ html_template = """
         }
         .chapter:hover { background-color: #e9ecef; border-color: #adb5bd; }
         .chapter.checked { background-color: #2b8a3e; color: white; border-color: #2b8a3e; font-weight: bold; }
+
+        /* 💡 하단 고정형 스마트 성경 가이드 바 디자인 */
+        .bible-bar {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background-color: #ffffff; box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+            padding: 15px 20px; display: none; z-index: 1000;
+            border-top-left-radius: 16px; border-top-right-radius: 16px;
+            animation: slideUp 0.3s ease-out;
+        }
+        .bible-bar-content {
+            max-width: 900px; margin: 0 auto;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .bible-info { font-size: 1.0em; font-weight: bold; color: #333; }
+        .bible-btn {
+            background-color: #e96479; color: white; border: none;
+            padding: 10px 18px; font-size: 0.95em; font-weight: bold;
+            border-radius: 8px; cursor: pointer; text-decoration: none;
+            transition: background 0.2s; box-shadow: 0 2px 6px rgba(233,100,121,0.3);
+        }
+        .bible-btn:hover { background-color: #d85267; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -155,6 +205,8 @@ html_template = """
                         {% for chapter in book.chapters %}
                         <div class="chapter" 
                              id="btn-{{ step.step_num }}-{{ book.title }}-{{ chapter }}" 
+                             data-book="{{ book.title }}"
+                             data-chapter="{{ chapter }}"
                              onclick="toggleCheck(this)">{{ chapter }}</div>
                         {% endfor %}
                     </div>
@@ -165,7 +217,18 @@ html_template = """
         </div>
         {% endfor %}
     </div>
+
+    <div class="bible-bar" id="bibleBar">
+        <div class="bible-bar-content">
+            <div class="bible-info" id="bibleInfo">선택된 장 정보</div>
+            <a href="#" target="_blank" class="bible-btn" id="bibleLink">📖 우리말성경 읽기</a>
+        </div>
+    </div>
+
     <script>
+        // 네이버 성경 우리말성경 코드 변환 사전
+        const mapping = {{ mapping|tojson }};
+
         document.addEventListener("DOMContentLoaded", function() {
             document.querySelectorAll('.chapter').forEach(function(element) {
                 var savedState = localStorage.getItem(element.id);
@@ -177,10 +240,29 @@ html_template = """
 
         function toggleCheck(element) {
             element.classList.toggle('checked');
+            
+            const rawBook = element.getAttribute('data-book');
+            const chapter = element.getAttribute('data-chapter');
+            const bar = document.getElementById('bibleBar');
+            
+            // 체크 상태 저장
             if (element.classList.contains('checked')) {
                 localStorage.setItem(element.id, "checked");
+                
+                // 💡 장 버튼을 클릭하면 밑에 우리말성경 링크바가 슥 올라옴
+                let cleanBook = rawBook.split('(')[0]; // 괄호 제거
+                cleanBook = cleanBook.split('/')[0];  // 슬래시 제거
+                
+                const bibleCode = mapping[rawBook] || "GEN";
+                
+                document.getElementById('bibleInfo').innerText = `📍 ${cleanBook} ${chapter}장`;
+                // 네이버 성경 - 우리말성경(WOO) 다이렉트 주소 매칭
+                document.getElementById('bibleLink').href = `https://bible.naver.com/bible.naver?version=WOO&office=${bibleCode}&chapter=${chapter}`;
+                
+                bar.style.display = 'block';
             } else {
                 localStorage.removeItem(element.id);
+                bar.style.display = 'none';
             }
         }
     </script>
@@ -190,7 +272,7 @@ html_template = """
 
 @app.route('/')
 def index():
-    return render_template_string(html_template, plan=bible_reading_plan)
+    return render_template_string(html_template, plan=bible_reading_plan, mapping=bible_url_mapping)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
