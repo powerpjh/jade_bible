@@ -4,9 +4,6 @@ import webbrowser
 import threading
 from flask import Flask, render_template_string
 
-def open_browser():
-    threading.Timer(1.5, lambda: webbrowser.open('http://127.0.0.1:5000/')).start()
-
 app = Flask(__name__)
 
 # 단 하나의 스텝도 빠짐없이 52개 전체를 꽉 채우고 문법 검증을 끝낸 데이터입니다.
@@ -115,11 +112,21 @@ html_template = """
     <style>
         body { font-family: 'Malgun Gothic', sans-serif; background-color: #f0f2f5; padding: 20px; margin: 0; }
         .container { max-width: 900px; margin: 0 auto; }
-        h1 { text-align: center; color: #1a2a6c; margin-bottom: 30px; font-size: 2.2em; }
+        
+        /* 💡 제목 크기를 줄이고 핸드폰에서도 절대 안 깨지게 수정 */
+        h1 { 
+            text-align: center; 
+            color: #1a2a6c; 
+            margin-bottom: 30px; 
+            font-size: 1.6em; /* 글자 크기 축소 */
+            white-space: nowrap; /* 무조건 한 줄로 나오게 강제 */
+            word-break: keep-all; 
+        }
+        
         .part { background-color: #fff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; padding: 25px; border-left: 6px solid #1a2a6c; }
-        .part-title { font-size: 1.4em; font-weight: bold; color: #1a2a6c; padding-bottom: 10px; margin-bottom: 20px; border-bottom: 1px dashed #ddd; }
+        .part-title { font-size: 1.2em; font-weight: bold; color: #1a2a6c; padding-bottom: 10px; margin-bottom: 20px; border-bottom: 1px dashed #ddd; }
         .step { background: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 15px; border: 1px solid #e9ecef; }
-        .step-num { font-size: 1.1em; font-weight: bold; color: #e96479; margin-bottom: 10px; display: inline-block; background: #ffeef1; padding: 2px 8px; border-radius: 4px; }
+        .step-num { font-size: 1.0em; font-weight: bold; color: #e96479; margin-bottom: 10px; display: inline-block; background: #ffeef1; padding: 2px 8px; border-radius: 4px; }
         .book { margin-left: 10px; margin-bottom: 12px; }
         .book-title { font-weight: bold; color: #495057; display: block; margin-bottom: 6px; font-size: 0.95em; }
         .chapters { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -146,7 +153,9 @@ html_template = """
                     <span class="book-title">📍 {{ book.title }}</span>
                     <div class="chapters">
                         {% for chapter in book.chapters %}
-                        <div class="chapter" onclick="toggleCheck(this)">{{ chapter }}</div>
+                        <div class="chapter" 
+                             id="btn-{{ step.step_num }}-{{ book.title }}-{{ chapter }}" 
+                             onclick="toggleCheck(this)">{{ chapter }}</div>
                         {% endfor %}
                     </div>
                 </div>
@@ -157,8 +166,22 @@ html_template = """
         {% endfor %}
     </div>
     <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            document.querySelectorAll('.chapter').forEach(function(element) {
+                var savedState = localStorage.getItem(element.id);
+                if (savedState === "checked") {
+                    element.classList.add('checked');
+                }
+            });
+        });
+
         function toggleCheck(element) {
             element.classList.toggle('checked');
+            if (element.classList.contains('checked')) {
+                localStorage.setItem(element.id, "checked");
+            } else {
+                localStorage.removeItem(element.id);
+            }
         }
     </script>
 </body>
