@@ -3,7 +3,7 @@ from flask import Flask, render_template_string
 
 app = Flask(__name__)
 
-# 한글엘프(hocr.net) 사이트의 성경별 고유 코드 매핑
+# 한글엘프(nocr.net) 사이트의 성경별 고유 코드 매핑
 BIBLE_CODE_MAP = {
     "창세기": "gen", "출애굽기": "exo", "레위기": "lev", "민수기": "num", "신명기": "deu",
     "여호수아": "jos", "사사기": "jdg", "룻기": "rut", "사무엘상": "1sa", "사무엘하": "2sa",
@@ -238,7 +238,7 @@ html_template = """
                 document.getElementById('bibleInfo').innerText = `📍 ${bookTitle} ${chapter}장`;
                 
                 const padChapter = String(chapter).padStart(2, '0');
-                document.getElementById('bibleLink').href = `https://hnocr.net/korwrm/read.php?b=${bibleCode}&c=${padChapter}`;
+                document.getElementById('bibleLink').href = `https://nocr.net/korwrm/read.php?b=${bibleCode}&c=${padChapter}`;
                 
                 bar.style.display = 'block';
             } else {
